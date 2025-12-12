@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مركز قفار الصحي - نظام انتظارك</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    body {margin:0;background:#f5f8ff;font-family:'Tajawal',sans-serif;}
+    .hero {background:linear-gradient(135deg,#2d4cfd,#0d47a1);color:white;padding:100px 20px;text-align:center;}
+    .hero h1 {font-size:70px;margin:0;color:white;}
+    .hero p {font-size:32px;margin:20px 0;}
+    .cards {display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:30px;padding:60px 40px;max-width:1200px;margin:0 auto;}
+    .card {background:white;border-radius:25px;padding:50px;box-shadow:0 15px 40px rgba(0,0,0,0.1);transition:0.4s;text-align:center;}
+    .card:hover {transform:translateY(-15px);box-shadow:0 25px 60px rgba(0,0,0,0.2);}
+    .card h3 {font-size:38px;color:#1565c0;margin:0;}
+    .card p {font-size:24px;color:#555;margin:20px 0;}
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="config.js"></script>
+
+
+<script>
+// يمنع F12 + كليك يمين + Ctrl+U + Ctrl+Shift+I
+document.addEventListener('keydown', function(e) {
+  if (e.keyCode == 123 || 
+      (e.ctrlKey && e.shiftKey && e.keyCode == 73) || 
+      (e.ctrlKey && e.keyCode == 85)) {
+    e.preventDefault();
+    return false;
+  }
+});
+document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+</head>
+<body>
+
+<script>
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.href = 'login.html';  // يرجع لصفحة الدخول لو مش مسجل
+    }
+  });
+</script>
+
+
+
+
+
+
+
+  <!-- Sidebar (نفس اللي في باقي الصفحات) -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h3>مركز قفار الصحي</h3>
+      <button class="toggle-btn" onclick="toggleSidebar()">X</button>
+    </div>
+    <div class="nav">
+      <a href="index.html">الرئيسية</a>
+      <a href="reception.html">الاستقبال</a>
+      <a href="nurse.html">لوحة التمريض</a>
+      <a href="display.html">شاشة العرض</a>
+      <a href="admin.html">لوحة الإدارة</a>
+    </div>
+  </div>
+  <div class="open-btn" onclick="toggleSidebar()">☰</div>
+
+  <!-- الهيدر -->
+  <div class="hero">
+    <h1>مركز قفار الصحي</h1>
+    <p>نظام أرقام انتظار المختبر</p>
+    <p style="font-size:28px;">اختر الصفحة المناسبة</p>
+  </div>
+
+  <!-- الكروت -->
+  <div class="cards">
+    <a href="reception.html" style="text-decoration:none;">
+      <div class="card">
+        <h3>الاستقبال</h3>
+        <p>إصدار رقم انتظار للمريض</p>
+      </div>
+    </a>
+
+    <a href="nurse.html" style="text-decoration:none;">
+      <div class="card">
+        <h3>لوحة التمريض</h3>
+        <p>استدعاء المرضى + سجل الزيارات</p>
+      </div>
+    </a>
+
+    <a href="display.html" style="text-decoration:none;">
+      <div class="card">
+        <h3>شاشة العرض</h3>
+        <p>لعرض الأرقام في صالة الانتظار</p>
+      </div>
+    </a>
+
+    <a href="admin.html" style="text-decoration:none;">
+      <div class="card">
+        <h3>لوحة الإدارة</h3>
+        <p>تعديل الحالات + سجل كامل</p>
+      </div>
+    </a>
+  </div>
+
+<script>
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("open");
+}
+</script>
+</body>
+</html>

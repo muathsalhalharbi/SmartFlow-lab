@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة الإدارة - مركز قفار الصحي</title>
+  <link rel="stylesheet" href="style.css">
+
+   <!-- Firebase - كل اللي تحتاجة -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> <!-- هذا السطر الجديد -->
+  <script src="config.js"></script>
+
+
+
+  <style>
+    body {background:#f5f5f5; font-family:Tajawal,Arial,sans-serif; margin:0;}
+    .container {max-width:1100px; margin:40px auto; padding:30px; background:white; border-radius:25px; box-shadow:0 10px 40px rgba(0,0,0,0.1);}
+    h1, h2 {color:#1565c0; text-align:center;}
+    .section {margin:50px 0; padding:30px; background:#e3f2fd; border-radius:20px;}
+    input, button {padding:15px; font-size:22px; margin:10px;}
+    button {background:#1565c0; color:white; border:none; border-radius:15px; cursor:pointer;}
+    table {width:100%; border-collapse:collapse; margin-top:20px;}
+    th, td {padding:15px; text-align:center; border-bottom:1px solid #ddd;}
+    th {background:#1565c0; color:white;}
+    .btn-small {padding:8px 15px; font-size:18px; margin:5px;}
+    .success {background:#2e7d32;}
+    .warning {background:#ff9800;}
+    .danger {background:#d32f2f;}
+  </style>
+
+  <script>
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+    }
+</script>
+  <script>
+    // منع F12 + كليك يمين + Ctrl+U + Ctrl+Shift+I
+    document.addEventListener('keydown', e => {
+      if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && e.keyCode == 73) || (e.ctrlKey && e.keyCode == 85)) {
+        e.preventDefault();
+      }
+    });
+    document.addEventListener('contextmenu', e => e.preventDefault());
+  </script>
+</head>
+<body>
+
+<script>
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.href = 'login.html';  // يرجع لصفحة الدخول لو مش مسجل
+    }
+  });
+</script>
+
+
+
+
+ <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h3>مركز قفار الصحي</h3>
+      <button class="toggle-btn" onclick="toggleSidebar()">X</button>
+    </div>
+    <div class="nav">
+      <a href="home.html">الرئيسية</a>
+      <a href="reception.html">الاستقبال</a>
+      <a href="nurse.html">لوحة التمريض</a>
+      <a href="display.html">شاشة العرض</a>
+      <a href="admin.html" style="background:#0d47a1;">لوحة الإدارة</a>
+      <a href="#" onclick="logout()" style="background:#d32f2f;color:white;padding:15px;">تسجيل الخروج</a>
+    </div>
+  </div>
+    </div>
+  </div>
+  <div class="open-btn" onclick="toggleSidebar()">☰</div>
+
+  <div class="container">
+    <h1>لوحة الإدارة - مركز قفار الصحي</h1>
+
+    <!-- تعديل حالة مريض اليوم -->
+    <div class="section">
+      <h2>تعديل حالة مريض حضر اليوم</h2>
+      <div style="text-align:center;">
+        <input type="text" id="adminId" placeholder="رقم الهوية" maxlength="10">
+        <button onclick="loadTodayPatient()">جلب المريض</button>
+      </div>
+      <div id="todayPatientInfo" style="margin:20px 0; font-size:24px;"></div>
+      <div id="todayPatientActions" style="text-align:center;display:none;">
+        <button class="btn-small success" onclick="adminUpdateStatus('حضر')">حضر</button>
+        <button class="btn-small warning" onclick="adminUpdateStatus('تأخر')">تأخر</button>
+        <button class="btn-small danger" onclick="adminUpdateStatus('لم يحضر')">لم يحضر</button>
+      </div>
+    </div>
+
+    <!-- بحث بالتاريخ -->
+    <div class="section">
+      <h2>سجل زيارات بتاريخ محدد</h2>
+      <div style="text-align:center;">
+        <input type="date" id="selectedDate" style="padding:18px;font-size:24px;">
+        <button onclick="searchByDate()">بحث</button>
+      </div>
+      <div id="dateResult" style="margin-top:30px;"></div>
+    </div>
+  </div>
+
+<script>
+let adminPatientDoc = null;
+const today = new Date().toISOString().slice(0,10);
+
+// جلب مريض اليوم
+async function loadTodayPatient() {
+  const id = document.getElementById("adminId").value.trim();
+  if (!id || id.length !== 10) return alert("أدخل رقم هوية صحيح");
+
+  const snap = await db.collection("queue")
+    .where("nationalId", "==", id)
+    .where("date", "==", today)
+    .get();
+
+  if (snap.empty) {
+    document.getElementById("todayPatientInfo").innerHTML = "<span style='color:red;'>لا يوجد مريض بهذه الهوية اليوم</span>";
+    document.getElementById("todayPatientActions").style.display = "none";
+    adminPatientDoc = null;
+  } else {
+    const doc = snap.docs[0];
+    const d = doc.data();
+    adminPatientDoc = doc.ref;
+    document.getElementById("todayPatientInfo").innerHTML = 
+      `<span style='color:green;'>تم العثور على المريض: رقم <strong>${d.number.toString().padStart(3,'0')}</strong> - الحالة الحالية: <strong>${d.attendance || "في الانتظار"}</strong></span>`;
+    document.getElementById("todayPatientActions").style.display = "block";
+  }
+}
+
+// تحديث حالة المريض
+async function adminUpdateStatus(status) {
+  if (!adminPatientDoc) return alert("لا يوجد مريض");
+  await adminPatientDoc.update({ attendance: status });
+
+  loadTodayPatient();
+}
+
+// البحث بالتاريخ (نفس الكود اللي شغال عندك في nurse.html)
+async function searchByDate() {
+  const inputDate = document.getElementById("selectedDate").value;
+  if (!inputDate) return alert("اختر تاريخ");
+
+  const searchDate = inputDate;
+
+  const snap = await db.collection("queue")
+    .where("date", "==", searchDate)
+    .get();
+
+  let results = [];
+
+  if (snap.empty) {
+    const allSnap = await db.collection("queue").get();
+    allSnap.forEach(doc => {
+      const d = doc.data();
+      if (d.date === searchDate ||  (d.timestamp && new Date(d.timestamp.seconds*1000).toISOString().slice(0,10) === searchDate)) {
+        results.push({id: doc.id, data: d});
+      }
+    });
+  } else {
+    snap.forEach(doc => results.push({id: doc.id, data: doc.data()}));
+  }
+
+  let html = `<div style="background:white;padding:25px;border-radius:20px;">
+    <h3 style="color:#1565c0;">سجل زيارات: ${inputDate.split('-').reverse().join('/')}</h3>
+    <table width="100%" style="border-collapse:collapse;">
+      <tr style="background:#1565c0;color:white;">
+        <th>الرقم</th><th>الهوية</th><th>الحالة</th>
+      </tr>`;
+
+  if (results.length === 0) {
+    html += `<tr><td colspan="3" style="padding:30px;color:#999;">لا توجد زيارات في هذا التاريخ</td></tr>`;
+  } else {
+    results.sort((a,b) => a.data.number - b.data.number);
+    results.forEach(item => {
+      const d = item.data;
+      const attendance = d.attendance || "في الانتظار";
+      html += `<tr>
+        <td>${d.number.toString().padStart(3,'0')}</td>
+        <td>${d.nationalId}</td>
+        <td><strong>${attendance}</strong></td>
+      </tr>`;
+    });
+  }
+  html += `</table></div>`;
+  document.getElementById("dateResult").innerHTML = html;
+}
+
+
+</script>
+
+
+<script>
+// دالة الخروج + حماية الصفحة
+function logout() {
+  firebase.auth().signOut().then(() => {
+    window.location.href = "login.html";
+  }).catch(() => {
+    window.location.href = "login.html";
+  });
+}
+
+// لو المستخدم مش مسجل دخوله → يرجع للـ login فورًا
+firebase.auth().onAuthStateChanged((user) => {
+  if (!user) {
+    window.location.href = "login.html";
+  }
+});
+</script>
+
+
+</body>
+</html>

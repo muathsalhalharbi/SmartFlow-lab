@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل الدخول - مركز قفار الصحي</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #0d47a1, #1565c0);
+      min-height: 100vh;
+      font-family: 'Tajawal', sans-serif;
+      overflow: hidden;
+    }
+
+    /* شاشة التحميل */
+    #loadingScreen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #0d47a1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      z-index: 9999;
+      transition: transform 1.2s ease-in-out;
+    }
+
+    #loadingScreen h1 {
+      font-size: 48px;
+      margin-bottom: 30px;
+    }
+
+    .loader {
+      width: 80px;
+      height: 80px;
+      border: 8px solid rgba(255,255,255,0.3);
+      border-top: 8px solid white;
+      border-radius: 50%;
+      animation: spin 1.5s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* نموذج تسجيل الدخول */
+    #loginBox {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      color: #1565c0;
+      padding: 60px 80px;
+      border-radius: 25px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+      text-align: center;
+      width: 90%;
+      max-width: 480px;
+      transition: top 1.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    }
+
+    #loginBox.visible {
+      top: 50%;
+    }
+
+    #loginBox h1 
+      { font-size: 40px; margin-bottom: 10px; }
+    #loginBox p         { font-size: 24px; color: #555; margin-bottom: 40px; }
+    input {
+      width: 100%; padding: 20px; margin: 12px 0;
+      font-size: 22px; border: 3px solid #e3f2fd; border-radius: 15px;
+      text-align: center; box-sizing: border-box;
+    }
+    input:focus { border-color: #1565c0; outline: none; }
+    button {
+      width: 100%; padding: 20px; background: #1565c0; color: white;
+      border: none; border-radius: 15px; font-size: 26px; cursor: pointer;
+      margin-top: 20px; font-weight: bold;
+    }
+    button:hover { background: #0d47a1; }
+    .error { color: #d32f2f; margin-top: 15px; font-size: 18px; display: none; }
+  </style>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="config.js"></script>
+
+
+
+
+  <script>
+// يمنع F12 + كليك يمين + Ctrl+U + Ctrl+Shift+I
+document.addEventListener('keydown', function(e) {
+  if (e.keyCode == 123 || 
+      (e.ctrlKey && e.shiftKey && e.keyCode == 73) || 
+      (e.ctrlKey && e.keyCode == 85)) {
+    e.preventDefault();
+    return false;
+  }
+});
+document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+
+
+</head>
+
+
+<body>
+
+  <!-- شاشة التحميل -->
+  <div id="loadingScreen">
+    <h1>مركز قفار الصحي</h1>
+    <div class="loader"></div>
+    <p style="margin-top:30px;font-size:24px;">جاري التحميل...</p>
+  </div>
+
+  <!-- نموذج تسجيل الدخول (مخفي في الأسفل أولاً) -->
+  <div id="loginBox">
+    <h1>مركز قفار الصحي</h1>
+    <p>نظام أرقام الانتظار</p>
+
+    <input type="email" id="email" placeholder="البريد الإلكتروني">
+    <input type="password" id="password" placeholder="كلمة المرور">
+
+    <button onclick="login()">تسجيل الدخول</button>
+    <div id="errorMsg" class="error"></div>
+  </div>
+
+  <script>
+    // بعد 5 ثواني نخفي التحميل ونطلع نموذج الدخول بسلاسة
+    setTimeout(() => {
+      document.getElementById("loadingScreen").style.transform = "translateY(-100%)";
+      document.getElementById("loginBox").classList.add("visible");
+    }, 5000);
+
+    // دالة تسجيل الدخول
+    function login() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const errorMsg = document.getElementById("errorMsg");
+
+      if (!email || !password) {
+        errorMsg.textContent = "يرجى إدخال البريد وكلمة المرور";
+        errorMsg.style.display = "block";
+        return;
+      }
+
+      errorMsg.style.display = "none";
+
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          const userEmail = userCredential.user.email;
+
+          if (userEmail.includes("admin")) location.href = "admin.html";
+          else if (userEmail.includes("nurse")) location.href = "nurse.html";
+          else if (userEmail.includes("reception")) location.href = "reception.html";
+          else location.href = "display.html";
+        })
+        .catch((error) => {
+          let msg = "بريد إلكتروني أو كلمة مرور خاطئة";
+          if (error.code === "auth/user-not-found") msg = "هذا البريد غير مسجل";
+          if (error.code === "auth/wrong-password") msg = "كلمة المرور خاطئة";
+
+          errorMsg.textContent = msg;
+          errorMsg.style.display = "block";
+        });
+    }
+
+    // لو مسجل دخوله من قبل → يدخل تلقائيًا بدون تحميل
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        const userEmail = user.email;
+        if (userEmail.includes("admin")) location.href = "admin.html";
+        else if (userEmail.includes("nurse")) location.href = "nurse.html";
+        else if (userEmail.includes("reception")) location.href = "reception.html";
+        else location.href = "display.html";
+      }
+    });
+
+    // دعم زر Enter
+    document.addEventListener("keypress", e => { if (e.key === "Enter") login(); });
+  </script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Tajawal', sans-serif;
+}
+
+body {
+  background: #e3f2fd;
+  color: #1565c0;
+  direction: rtl;
+  text-align: center;
+  padding: 20px 10px;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  background: white;
+  padding: 30px 20px;
+  border-radius: 25px;
+  box-shadow: 0 15px 50px rgba(21,101,192,0.15);
+}
+
+/* العناوين والنصوص */
+h1 { font-size: 42px; margin-bottom: 15px; color: #0d47a1; }
+h2 { color: #1565c0; margin: 40px 0 20px; }
+
+/* الأزرار والإنبوت */
+input, button {
+  padding: 18px;
+  margin: 10px 5px;
+  font-size: 24px;
+  border-radius: 15px;
+  border: none;
+}
+input {
+  width: 75%;
+  border: 3px solid #1565c0;
+  text-align: center;
+}
+button {
+  background: #1565c0;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+  min-width: 200px;
+  transition: 0.3s;
+}
+button:hover {
+  background: #003087;
+  transform: translateY(-3px);
+}
+
+/* الرقم الكبير */
+.big-number {
+  font-size: 180px;
+  font-weight: 900;
+  color: #1565c0;
+  margin: 40px 0;
+  line-height: 1;
+}
+
+.current-block {
+  background: white;
+  color: #1565c0;
+  padding: 40px;
+  border-radius: 25px;
+  font-size: 50px;
+  font-weight: bold;
+  box-shadow: 0 8px 25px rgba(21,101,192,0.2);
+}
+
+/* كروت الانتظار */
+.block {
+  background: #bbdefb;
+  padding: 22px;
+  margin: 15px auto;
+  border-radius: 20px;
+  font-size: 26px;
+  max-width: 900px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* الساعة */
+#clock {
+  font-size: 70px;
+  font-weight: 900;
+  color: #0d47a1;
+  margin: 30px 0;
+}
+
+/* ===================================
+   Sidebar الجديد بالـ Toggle (اللي يشتغل بالضغط)
+   =================================== */
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: -300px;           /* مخفي في البداية */
+  width: 280px;
+  height: 100vh;
+  background: #1565c0;
+  color: white;
+  transition: right 0.4s ease;
+  z-index: 1000;
+  box-shadow: -5px 0 20px rgba(0,0,0,0.3);
+  overflow-y: auto;
+}
+
+.sidebar.open {
+  right: 0;                /* يظهر لما نضغط الزر */
+}
+
+.sidebar-header {
+  padding: 20px;
+  background: #0d47a1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 22px;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 32px;
+  cursor: pointer;
+}
+
+.nav a {
+  display: block;
+  padding: 18px 25px;
+  color: white;
+  text-decoration: none;
+  font-size: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  transition: 0.3s;
+}
+
+.nav a:hover, .nav a[style*="background"] {
+  background: rgba(255,255,255,0.2);
+}
+
+/* زر فتح الـ Sidebar من الخارج */
+.open-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 999;
+  background: #1565c0;
+  color: white;
+  border: none;
+  width: 56px;
+  height: 56px;
+  font-size: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* إخفاء زر الفتح لما الـ Sidebar مفتوح */
+.sidebar.open ~ .open-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ===================================
+   Responsive كامل لكل الأجهزة
+   =================================== */
+@media (max-width: 1024px) {
+  .container { padding: 25px 15px; }
+  h1 { font-size: 36px; }
+  .big-number { font-size: 140px; }
+}
+
+@media (max-width: 768px) {
+  body { padding: 15px 10px; }
+  .container { padding: 20px 15px; border-radius: 20px; }
+  h1 { font-size: 32px; }
+  input, button { font-size: 22px; padding: 16px; width: 100%; margin: 8px 0; }
+  .current-block { font-size: 45px; padding: 30px; }
+  .big-number { font-size: 110px; }
+  .block { font-size: 22px; padding: 18px; }
+  #clock { font-size: 60px; }
+  .open-btn { width: 50px; height: 50px; font-size: 26px; top: 15px; right: 15px; }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 28px; }
+  .big-number { font-size: 90px; }
+  .current-block { font-size: 40px; padding: 25px; }
+  .block { font-size: 20px; }
+  button { font-size: 20px; padding: 16px; }
+  #clock { font-size: 50px; }
+  .open-btn { width: 48px; height: 48px; font-size: 24px; }
+}

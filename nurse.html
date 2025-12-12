@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التمريض - مركز قفار الصحي</title>
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Firebase - كل اللي تحتاجة -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script> <!-- هذا السطر الجديد -->
+  <script src="config.js"></script>
+
+  <script>
+    // منع F12 + كليك يمين + Ctrl+U + Ctrl+Shift+I
+    document.addEventListener('keydown', function(e) {
+      if (e.keyCode == 123 || 
+          (e.ctrlKey && e.shiftKey && e.keyCode == 73) || 
+          (e.ctrlKey && e.keyCode == 85)) {
+        e.preventDefault();
+        return false;
+      }
+    });
+    document.addEventListener('contextmenu', e => e.preventDefault());
+  </script>
+</head>
+
+<body>
+
+<script>
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) {
+      window.location.href = 'login.html';  // يرجع لصفحة الدخول لو مش مسجل
+    }
+  });
+</script>
+
+
+
+
+
+
+
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h3>مركز قفار الصحي</h3>
+      <button class="toggle-btn" onclick="toggleSidebar()">X</button>
+    </div>
+    <div class="nav">
+      <a href="home.html">الرئيسية</a>
+      <a href="reception.html">الاستقبال</a>
+      <a href="nurse.html">لوحة التمريض</a>
+      <a href="display.html">شاشة العرض</a>
+      <a href="admin.html" style="background:#0d47a1;">لوحة الإدارة</a>
+      <a href="#" onclick="logout()" style="background:#d32f2f;color:white;padding:15px;">تسجيل الخروج</a>
+    </div>
+  </div>
+
+  <!-- زر فتح الـ Sidebar -->
+  <button class="open-btn" onclick="toggleSidebar()">☰</button>
+
+  <div class="container">
+    <h1>مركز قفار الصحي</h1>
+    <p style="font-size:32px;margin-bottom:30px;">لوحة التمريض - مختبر التحاليل</p>
+
+    <!-- الرقم الحالي -->
+    <div style="background:#e3f2fd;padding:40px;border-radius:25px;margin:30px 0;">
+      <h2 style="color:#1565c0;margin-bottom:25px;">الرقم الحالي</h2>
+      <div class="current-block" id="currentNum">000</div>
+      <div style="font-size:36px;color:#1565c0;margin-top:20px;" id="currentId">الهوية: ----------</div>
+    </div>
+
+    <!-- زر التالي -->
+    <div style="margin:20px 0;">
+      <button onclick="callNext()" class="big-btn">التالي</button>
+    </div>
+
+    <!-- قائمة الانتظار -->
+    <h2 style="color:#1565c0;">المرضى في الانتظار</h2>
+    <div id="queue" style="margin-top:20px;"></div>
+
+    <!-- أزرار الحالة -->
+    <div style="margin:60px 0 40px;">
+      <h2 style="color:#1565c0;margin-bottom:25px;">تحديث حالة المريض الحالي</h2>
+      <button onclick="updateStatus('حضر')"  style= background-color:chartreuse class="status-btn present">حضر</button>
+      <button onclick="updateStatus('تأخر')"  style= background-color:chocolate class="status-btn late">تأخر</button>
+      <button onclick="updateStatus('لم يحضر')" style= background-color:#d32f2f class="status-btn absent">لم يحضر</button>
+      <p style="margin-top:20px;color:#d32f2f;font-size:18px;">
+        ملاحظة: لو ما حددت حالة → يُسجل "حضر" تلقائيًا بعد 30 ثانية
+      </p>
+    </div>
+
+    <!-- بحث برقم الهوية -->
+    <div style="margin:60px 0;">
+      <h2 style="color:#1565c0;margin-bottom:20px;">بحث برقم الهوية</h2>
+      <input type="text" id="searchId" placeholder="أدخل رقم الهوية (10 أرقام)" maxlength="10">
+      <button onclick="searchById()">بحث</button>
+      <div id="idResult" style="margin-top:25px 0;"></div>
+    </div>
+
+    <!-- بحث بالتاريخ -->
+    <div style="margin:60px 0;">
+      <h2 style="color:#1565c0;margin-bottom:20px;">بحث بتاريخ محدد</h2>
+      <input type="date" id="selectedDate">
+      <button onclick="searchByDate()">بحث</button>
+      <div id="dateResult" style="margin-top:25px;"></div>
+    </div>
+  </div>
+
+  <script>
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+    }
+
+    let currentPatientDoc = null;
+    const today = new Date().toISOString().slice(0,10);
+
+    // تحديث الطابور والرقم الحالي في الوقت الفعلي
+    db.collection("queue")
+      .where("date", "==", today)
+      .onSnapshot(snap => {
+        let maxCalled = 0;
+        let currentId = "----------";
+        let waiting = [];
+
+        snap.forEach(doc => {
+          const d = doc.data();
+          if (d.status === "called" && d.number > maxCalled) {
+            maxCalled = d.number;
+            currentId = d.nationalId;
+            currentPatientDoc = doc.ref;
+          }
+          if (d.status === "waiting") waiting.push({data: d});
+        });
+
+        document.getElementById("currentNum").textContent = maxCalled.toString().padStart(3,'0') || "000";
+        document.getElementById("currentId").textContent = "الهوية: " + currentId;
+
+        waiting.sort((a,b) => a.data.number - b.data.number);
+        let html = "";
+        waiting.forEach((item, i) => {
+          const attendance = item.data.attendance || "في الانتظار";
+          const color = attendance === "حضر" ? "#e8f5e8" : 
+                        attendance === "تأخر" ? "#fff3e0" : 
+                        attendance === "لم يحضر" ? "#ffebee" : "#bbdefb";
+          html += `<div class="block" style="background:${color};">
+            ${i+1}. رقم <strong>${item.data.number.toString().padStart(3,'0')}</strong><br>
+            الهوية: ${item.data.nationalId}<br>
+            الحالة: <strong>${attendance}</strong>
+          </div>`;
+        });
+        document.getElementById("queue").innerHTML = html || "<div class='block'>لا يوجد مرضى في الانتظار</div>";
+      });
+
+    //  الدوال (callNext - updateStatus - searchById - searchByDate) 
+
+    async function callNext() {
+      const snap = await db.collection("queue")
+        .where("status", "==", "waiting")
+        .where("date", "==", today)
+        .get();
+
+      if (snap.empty) return alert("لا يوجد مرضى في الانتظار");
+
+      let minDoc = null;
+      let minNum = Infinity;
+      snap.forEach(doc => {
+        const num = doc.data().number;
+        if (num < minNum) {
+          minNum = num;
+          minDoc = doc;
+        }
+      });
+
+      if (minDoc) {
+        const docSnap = await minDoc.ref.get();
+        const currentData = docSnap.data();
+
+        let newAttendance = "حضر";
+        if (currentData.attendance === "تأخر" || currentData.attendance === "لم يحضر") {
+          newAttendance = currentData.attendance;
+        }
+
+        await minDoc.ref.update({
+          status: "called",
+          attendance: newAttendance,
+          attendanceUpdatedAt: new Date()
+        });
+
+        currentPatientDoc = minDoc.ref;
+      }
+    }
+
+    async function updateStatus(status) {
+      if (!currentPatientDoc) return alert("لا يوجد مريض حالي");
+
+      const docSnap = await currentPatientDoc.get();
+      if (!docSnap.exists) return;
+
+      const data = docSnap.data();
+      const patientId = data.nationalId;
+      const ticketNum = data.number;
+
+      await currentPatientDoc.update({ 
+        attendance: status,
+        attendanceUpdatedAt: new Date()
+      });
+
+      const visitsRef = db.collection("patients").doc(patientId).collection("visits");
+      const todayStr = new Date().toISOString().slice(0,10);
+
+      const visitSnap = await visitsRef
+        .where("number", "==", ticketNum)
+        .where("date", "==", todayStr)
+        .get();
+
+      if (!visitSnap.empty) {
+        visitSnap.forEach(doc => doc.ref.update({ attendance: status }));
+      } else {
+        await visitsRef.add({
+          number: ticketNum,
+          date: todayStr,
+          time: new Date().toLocaleTimeString('ar-SA'),
+          timestamp: new Date(),
+          attendance: status
+        });
+      }
+    }
+
+    async function searchById() {
+      const id = document.getElementById("searchId").value.trim();
+      if (!id || id.length !== 10) return alert("أدخل رقم هوية صحيح (10 أرقام)");
+
+      const snap = await db.collection("patients").doc(id).collection("visits")
+        .orderBy("timestamp", "desc")
+        .get();
+
+      let html = `<div style="background:white;padding:25px;border-radius:20px;box-shadow:0 5px 20px rgba(0,0,0,0.1);">
+        <h3 style="color:#1565c0;">سجل زيارات المريض: ${id}</h3>
+        <table width="100%" style="border-collapse:collapse;font-size:18px;">
+          <tr style="background:#1565c0;color:white;"><th>التاريخ</th><th>الوقت</th><th>الرقم</th><th>الحالة</th></tr>`;
+
+      if (snap.empty) {
+        html += `<tr><td colspan="4" style="padding:30px;color:#999;">لا توجد زيارات سابقة</td></tr>`;
+      } else {
+        snap.forEach(doc => {
+          const d = doc.data();
+          const t = new Date(d.timestamp.seconds*1000);
+          const dateStr = `${String(t.getDate()).padStart(2,'0')}/${String(t.getMonth()+1).padStart(2,'0')}/${t.getFullYear()}`;
+          const attendance = d.attendance || "في الانتظار";
+          html += `<tr>
+            <td>${dateStr}</td>
+            <td>${t.toLocaleTimeString('ar-SA')}</td>
+            <td>${d.number.toString().padStart(3,'0')}</td>
+            <td><strong>${attendance}</strong></td>
+          </tr>`;
+        });
+      }
+      html += `</table></div>`;
+      document.getElementById("idResult").innerHTML = html;
+    }
+
+    async function searchByDate() {
+      const inputDate = document.getElementById("selectedDate").value;
+      if (!inputDate) return alert("اختر تاريخ");
+
+      const snap = await db.collection("queue")
+        .where("date", "==", inputDate)
+        .get();
+
+      let results = [];
+      if (snap.empty) {
+        const allSnap = await db.collection("queue").get();
+        allSnap.forEach(doc => {
+          const d = doc.data();
+          if (d.date === inputDate || 
+              (d.timestamp && new Date(d.timestamp.seconds*1000).toISOString().slice(0,10) === inputDate)) {
+            results.push({id: doc.id, data: d});
+          }
+        });
+      } else {
+        snap.forEach(doc => results.push({id: doc.id, data: doc.data()}));
+      }
+
+      let html = `<div style="background:white;padding:25px;border-radius:20px;box-shadow:0 5px 20px rgba(0,0,0,0.1);">
+        <h3 style="color:#1565c0;">سجل الزيارات: ${inputDate.split('-').reverse().join('/')}</h3>
+        <table width="100%" style="border-collapse:collapse;font-size:18px;">
+          <tr style="background:#1565c0;color:white;"><th>الرقم</th><th>الهوية</th><th>الحالة</th></tr>`;
+
+      if (results.length === 0) {
+        html += `<tr><td colspan="3" style="padding:30px;color:#999;">لا توجد زيارات في هذا التاريخ</td></tr>`;
+      } else {
+        results.sort((a,b) => a.data.number - b.data.number);
+        results.forEach(item => {
+          const d = item.data;
+          const attendance = d.attendance || "في الانتظار";
+          html += `<tr>
+            <td>${d.number.toString().padStart(3,'0')}</td>
+            <td>${d.nationalId}</td>
+            <td><strong>${attendance}</strong></td>
+          </tr>`;
+        });
+      }
+      html += `</table></div>`;
+      document.getElementById("dateResult").innerHTML = html;
+    }
+  </script>
+
+
+
+
+
+
+<script>
+// دالة الخروج + حماية الصفحة
+function logout() {
+  firebase.auth().signOut().then(() => {
+    window.location.href = "login.html";
+  }).catch(() => {
+    window.location.href = "login.html";
+  });
+}
+
+// لو المستخدم مش مسجل دخوله → يرجع للـ login فورًا
+firebase.auth().onAuthStateChanged((user) => {
+  if (!user) {
+    window.location.href = "login.html";
+  }
+});
+</script>
+
+
+
+</body>
+</html>

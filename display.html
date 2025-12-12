@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>شاشة الانتظار - مركز قفار الصحي</title>
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    /* ←←←← السطرين السحريين (غيّر الرقم 0.84 للي يعجبك) */
+    body {
+      zoom: 0.5;                     /* كروم وإيدج */
+      -moz-transform: scale(0.84);    /* فايرفوكس */
+      transform: scale(0.84);
+      -moz-transform-origin: top center;
+      transform-origin: top center;
+      width: 100%;                    /* يعوّض التصغير عشان ما يطلع سكرول أفقي */
+      height: 100vh;
+      overflow: hidden;
+    }
+    /* ↑↑↑ خلّصنا، باقي الكود كما هو 100% */
+
+    body { margin:0; background:#1565c0; color:white; font-family:'Tajawal',sans-serif; }
+    .header {
+      background:#0d47a1; padding:20px 40px; display:flex;
+      justify-content:space-between; align-items:center; position:fixed;
+      top:0; left:0; right:0; z-index:1000; box-shadow:0 5px 15px rgba(0,0,0,0.3);
+    }
+    .header h1 { font-size:48px; margin:0; }
+    .time-info { text-align:left; }
+    #clock { font-size:70px; font-weight:900; margin:10px 0; }
+    #date { font-size:35px; }
+    .main-content { margin-top:140px; padding:30px; min-height:100vh; }
+    .current-box {
+      background:#1976d2; padding:60px; border-radius:40px;
+      max-width:1000px; margin:40px auto; text-align:center;
+      box-shadow:0 20px 50px rgba(0,0,0,0.3);
+    }
+    #currentNumber { font-size:300px; font-weight:900; color:#ffffff; margin:20px 0; }
+    .patient-info { font-size:50px; margin:20px 0; }
+    .history {
+      max-width:1000px; margin:40px auto;
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(400px,1fr)); gap:25px;
+    }
+    .history-item {
+      background:rgba(255,255,255,0.15); padding:35px; border-radius:30px;
+      text-align:center; font-size:45px; backdrop-filter:blur(5px);
+    }
+    .history-number { font-size:90px; font-weight:900; color:#ffffff; }
+  </style>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="config.js"></script>
+
+<script>
+// يمنع F12 + كليك يمين + Ctrl+U + Ctrl+Shift+I
+document.addEventListener('keydown', function(e) {
+  if (e.keyCode == 123 || 
+      (e.ctrlKey && e.shiftKey && e.keyCode == 73) || 
+      (e.ctrlKey && e.keyCode == 85)) {
+    e.preventDefault();
+    return false;
+  }
+});
+document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+
+
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <h1>مركز قفار الصحي</h1>
+      <p style="margin:0;font-size:32px;">المختبر</p>
+    </div>
+    <div class="time-info">
+      <div id="clock">00:00</div>
+      <div id="date"></div>
+    </div>
+  </div>
+
+  <div class="main-content">
+
+    <div class="current-box">
+      <h2 style="font-size:80px;margin:0;">الرقم الحالي</h2>
+      <div id="currentNumber">000</div>
+      <div class="patient-info" id="currentId">الهوية: ----------</div>
+      <div class="patient-info" id="currentTime">التاريخ والوقت: ----------</div>
+    </div>
+
+    <h2 style="font-size:60px;text-align:center;margin:60px 0;">تمت الخدمة</h2>
+    <div class="history" id="history"></div>
+
+  </div>
+
+<script>
+// الساعة والتاريخ
+setInterval(() => {
+  const n = new Date();
+  document.getElementById("clock").textContent = 
+    n.toLocaleTimeString('ar-SA', {hour: '2-digit', minute:'2-digit'});
+  document.getElementById("date").textContent = 
+    n.toLocaleDateString('ar-SA');
+}, 1000);
+
+// نفس الكود الأصلي 100% بدون أي تغيير
+const today = new Date().toISOString().slice(0,10);
+
+db.collection("queue")
+  .where("date", "==", today)
+  .onSnapshot(snap => {
+    let maxCalled = 0;
+    let currentId = "----------";
+    let currentTime = "----------";
+    let calledList = [];
+
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (d.status === "called") {
+        calledList.push({number: d.number, id: d.nationalId, time: d.timestamp});
+        if (d.number > maxCalled) {
+          maxCalled = d.number;
+          currentId = d.nationalId;
+          currentTime = new Date(d.timestamp.seconds*1000).toLocaleString('ar-SA');
+        }
+      }
+    });
+
+    document.getElementById("currentNumber").textContent = maxCalled.toString().padStart(3,'0') || "000";
+    document.getElementById("currentId").textContent = "الهوية: " + currentId;
+    document.getElementById("currentTime").textContent = "التاريخ والوقت: " + currentTime;
+
+    calledList.sort((a,b) => b.number - a.number);
+    const container = document.getElementById("history");
+    container.innerHTML = "";
+    calledList.slice(1, 5).forEach(item => {
+      const time = new Date(item.time.seconds*1000);
+      const div = document.createElement("div");
+      div.className = "history-item";
+      div.innerHTML = `
+        <div class="history-number">${item.number.toString().padStart(3,'0')} </div>
+        <div>الهوية: ${item.id}</div>
+        <div>${time.toLocaleString('ar-SA')}</div>
+      `;
+      container.appendChild(div);
+    });
+  });
+</script>
+</body>
+</html>
