@@ -7,6 +7,9 @@
   font-family: 'Tajawal', sans-serif;
 }
 
+.hidden { display:none; }
+
+
 body {
   background: #e3f2fd;
   color: #1565c0;
@@ -200,4 +203,5 @@ button:hover {
   button { font-size: 20px; padding: 16px; }
   #clock { font-size: 50px; }
   .open-btn { width: 48px; height: 48px; font-size: 24px; }
+
 }
